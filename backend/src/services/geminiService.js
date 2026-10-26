@@ -13,8 +13,10 @@ export class GeminiService {
     }
 
     const modelsToTry = [
-      config.geminiPrimaryModel || 'gemini-2.5-flash',
-      config.geminiFallbackModel || 'gemini-3.5-flash',
+      config.geminiPrimaryModel || 'gemini-3-flash-preview',
+      'gemini-3.5-flash',
+      'gemini-3-flash-preview',
+      'gemini-3.8-flash',
       'gemini-flash-latest'
     ];
 
@@ -49,9 +51,9 @@ export class GeminiService {
         const latencyMs = Date.now() - startTime;
 
         if (!response.ok) {
-          // If unavailable / high demand, try the next fallback model
-          if (response.status === 503 || response.status === 429) {
-            console.warn(`[GeminiService] Model ${model} returned ${response.status}. Attempting fallback...`);
+          // If unavailable, high demand, or model no longer available, try the next fallback model
+          if (response.status === 503 || response.status === 429 || response.status === 404) {
+            console.warn(`[GeminiService] Model ${model} returned HTTP ${response.status}. Attempting fallback...`);
             lastError = new Error(data.error?.message || `HTTP ${response.status}`);
             continue;
           }
