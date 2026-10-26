@@ -13,9 +13,9 @@ export class GeminiService {
     }
 
     const modelsToTry = [
-      config.geminiPrimaryModel || 'gemini-3.5-flash',
-      config.geminiFallbackModel || 'gemini-3.5-flash-lite',
-      'gemini-3.6-flash'
+      config.geminiPrimaryModel || 'gemini-2.5-flash',
+      config.geminiFallbackModel || 'gemini-3.5-flash',
+      'gemini-flash-latest'
     ];
 
     let lastError = null;
