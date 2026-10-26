@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertTriangle, Info, Terminal } from 'lucide-react';
+import { Terminal } from 'lucide-react';
 
 export const PresentationBanner = () => {
   return (

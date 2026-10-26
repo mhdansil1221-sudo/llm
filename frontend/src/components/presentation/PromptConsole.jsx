@@ -1,5 +1,5 @@
 import React from 'react';
-import { Send, Trash2, ShieldAlert, Sparkles, AlertCircle } from 'lucide-react';
+import { Send, Trash2, ShieldAlert, AlertCircle } from 'lucide-react';
 
 export const PromptConsole = ({
   prompt,

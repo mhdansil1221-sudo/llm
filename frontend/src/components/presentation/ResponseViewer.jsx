@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   ShieldCheck, 
   AlertTriangle, 
@@ -7,11 +7,23 @@ import {
   Cpu, 
   Copy, 
   Check, 
-  TerminalSquare 
+  TerminalSquare,
+  Bot,
+  Sparkles,
+  FileText,
+  Code
 } from 'lucide-react';
+import { marked } from 'marked';
+import DOMPurify from 'dompurify';
+
+marked.setOptions({
+  gfm: true,
+  breaks: true
+});
 
 export const ResponseViewer = ({ result, loading }) => {
   const [copied, setCopied] = useState(false);
+  const [viewMode, setViewMode] = useState('formatted'); // 'formatted' | 'raw'
 
   const handleCopy = () => {
     if (!result?.response) return;
@@ -20,12 +32,27 @@ export const ResponseViewer = ({ result, loading }) => {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const responseText = result?.response || '';
+
+  const sanitizedHtml = useMemo(() => {
+    if (!responseText) return '';
+    try {
+      const rawHtml = marked.parse(responseText);
+      return DOMPurify.sanitize(rawHtml);
+    } catch (e) {
+      console.error('Failed to parse markdown:', e);
+      return responseText;
+    }
+  }, [responseText]);
+
   if (loading) {
     return (
       <div className="response-card response-placeholder">
         <div className="terminal-loader">
-          <div className="pulse-circle"></div>
-          <p className="loader-text">Querying Gemini LLM and evaluating safety boundaries...</p>
+          <div className="loader-icon-wrapper">
+            <Sparkles size={28} className="text-primary spin-pulse" />
+          </div>
+          <p className="loader-text">Querying Gemini LLM &amp; Evaluating Safety Boundaries...</p>
           <span className="loader-sub">Measuring inference latency and safety candidate ratings</span>
         </div>
       </div>
@@ -35,7 +62,7 @@ export const ResponseViewer = ({ result, loading }) => {
   if (!result) {
     return (
       <div className="response-card response-empty">
-        <TerminalSquare size={36} className="empty-icon text-muted" />
+        <TerminalSquare size={40} className="empty-icon text-muted" />
         <h4 className="empty-title">Awaiting Command Execution</h4>
         <p className="empty-desc">
           Select an attack preset above or type a command in the console to observe the live LLM response and safety classification.
@@ -76,7 +103,7 @@ export const ResponseViewer = ({ result, loading }) => {
             <Clock size={13} /> {result.latencyMs ? `${result.latencyMs} ms` : 'N/A'}
           </span>
           <span className="metric-chip">
-            <Cpu size={13} /> {result.modelUsed || 'gemini-3.5-flash'}
+            <Cpu size={13} /> {result.modelUsed || 'gemini-2.5-flash'}
           </span>
           <button
             type="button"
@@ -89,10 +116,46 @@ export const ResponseViewer = ({ result, loading }) => {
         </div>
       </div>
 
-      <div className="response-body">
-        <div className="response-text-wrapper">
-          <pre className="response-text">{result.response}</pre>
+      <div className="response-subbar">
+        <div className="response-answer-title">
+          <Bot size={16} className="text-primary answer-icon" />
+          <span className="answer-heading">Model Answer</span>
+          <span className="answer-badge">Live Evaluation</span>
         </div>
+
+        <div className="view-mode-toggle">
+          <button
+            type="button"
+            className={`view-mode-btn ${viewMode === 'formatted' ? 'active' : ''}`}
+            onClick={() => setViewMode('formatted')}
+            title="Formatted View (Render Markdown & Tables)"
+          >
+            <FileText size={12} />
+            <span>Formatted</span>
+          </button>
+          <button
+            type="button"
+            className={`view-mode-btn ${viewMode === 'raw' ? 'active' : ''}`}
+            onClick={() => setViewMode('raw')}
+            title="Raw Markdown Syntax"
+          >
+            <Code size={12} />
+            <span>Raw</span>
+          </button>
+        </div>
+      </div>
+
+      <div className="response-body">
+        {viewMode === 'formatted' ? (
+          <div 
+            className="markdown-content"
+            dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
+          />
+        ) : (
+          <div className="response-text-wrapper">
+            <pre className="response-text">{result.response}</pre>
+          </div>
+        )}
       </div>
 
       {result.safetyRatings && result.safetyRatings.length > 0 && (

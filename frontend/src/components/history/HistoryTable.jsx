@@ -1,5 +1,5 @@
 import React from 'react';
-import { History, RefreshCw, Trash2, Clock, AlertTriangle, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { History, RefreshCw, Trash2, AlertTriangle, ShieldCheck, CheckCircle2 } from 'lucide-react';
 
 export const HistoryTable = ({ logs, loading, onRefresh, onClear }) => {
   return (
