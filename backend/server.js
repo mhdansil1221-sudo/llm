@@ -23,7 +23,7 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString(),
     service: 'LLM Safety Evaluation Service',
     database: dbStatus,
-    activeModel: config.geminiPrimaryModel
+    activeModel: config.groqApiKey ? `Groq (${config.groqModel})` : config.geminiPrimaryModel
   });
 });
 

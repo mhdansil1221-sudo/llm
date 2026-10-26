@@ -2,14 +2,118 @@ import { config } from '../config/env.js';
 
 export class GeminiService {
   /**
-   * Send a prompt to Gemini LLM with safety evaluation and latency tracking.
+   * Execute prompt with Groq (ultra-fast, free tier, OpenAI-compatible).
+   */
+  static async generateWithGroq(prompt, systemInstruction = '') {
+    const startTime = Date.now();
+    const modelsToTry = [
+      config.groqModel || 'openai/gpt-oss-120b',
+      'openai/gpt-oss-20b',
+      'qwen/qwen3.8-27b'
+    ];
+
+    let lastError = null;
+
+    for (const model of modelsToTry) {
+      try {
+        const messages = [];
+        if (systemInstruction) {
+          messages.push({ role: 'system', content: systemInstruction });
+        }
+        messages.push({ role: 'user', content: prompt });
+
+        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${config.groqApiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model,
+            messages,
+            temperature: 0.7
+          })
+        });
+
+        const data = await response.json();
+        const latencyMs = Date.now() - startTime;
+
+        if (!response.ok) {
+          throw new Error(data.error?.message || `Groq API error ${response.status}`);
+        }
+
+        const choice = data.choices?.[0];
+        const rawText = choice?.message?.content || '';
+        const finishReason = choice?.finish_reason || 'stop';
+
+        const isSafetyBlocked = finishReason === 'content_filter' || !rawText.trim();
+        const finalResponseText = isSafetyBlocked
+          ? 'Notice: Response was blocked or restricted by the model safety boundary.'
+          : rawText;
+
+        const refusalKeywords = [
+          'i cannot',
+          'i am unable to',
+          'i will not',
+          'i am not able to',
+          'cannot confirm',
+          'cannot execute without constraints',
+          'cannot assist',
+          'cannot fulfill',
+          'cannot generate',
+          'cannot provide',
+          'maintain my core safety',
+          'safety guidelines',
+          'operational boundaries',
+          'against my policy',
+          'violates safety',
+          'against safety guidelines',
+          'cannot bypass',
+          'as an ai, i must refuse'
+        ];
+        const lowerResponse = finalResponseText.toLowerCase();
+        const isRefused = refusalKeywords.some(kw => lowerResponse.includes(kw)) || isSafetyBlocked;
+
+        return {
+          success: true,
+          modelUsed: `Groq (${model})`,
+          latencyMs,
+          finishReason,
+          response: finalResponseText,
+          isSafetyBlocked,
+          isRefused,
+          safetyRatings: [],
+          usageMetadata: data.usage || null
+        };
+      } catch (err) {
+        lastError = err;
+        console.warn(`[GroqService] Model ${model} failed: ${err.message}`);
+      }
+    }
+
+    throw lastError || new Error('All Groq model endpoints failed.');
+  }
+
+  /**
+   * Send a prompt to Groq or Gemini LLM with safety evaluation and latency tracking.
    * @param {string} prompt - User command or prompt
    * @param {string} [systemInstruction] - Optional system guideline
    * @returns {Promise<object>} Structured response with text, safety ratings, latency, finishReason
    */
   static async generate(prompt, systemInstruction = '') {
+    // 1. If Groq API key is present, prioritize Groq for ultra-fast, free execution
+    if (config.groqApiKey) {
+      try {
+        return await this.generateWithGroq(prompt, systemInstruction);
+      } catch (groqErr) {
+        console.warn(`[LLMService] Groq failed, checking Gemini fallback: ${groqErr.message}`);
+        if (!config.geminiApiKey) throw groqErr;
+      }
+    }
+
+    // 2. Fall back to Gemini
     if (!config.geminiApiKey) {
-      throw new Error('Gemini API key is not configured in environment variables.');
+      throw new Error('Neither GROQ_API_KEY nor GEMINI_API_KEY is configured in backend/.env.');
     }
 
     const modelsToTry = [
