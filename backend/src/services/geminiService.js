@@ -4,7 +4,7 @@ export class GeminiService {
   /**
    * Execute prompt with Groq (ultra-fast, free tier, OpenAI-compatible).
    */
-  static async generateWithGroq(prompt, systemInstruction = '') {
+  static async generateWithGroq(prompt, systemInstruction = '', groundingInfo = null) {
     const startTime = Date.now();
     const modelsToTry = [
       config.groqModel || 'openai/gpt-oss-120b',
@@ -17,8 +17,15 @@ export class GeminiService {
     for (const model of modelsToTry) {
       try {
         const messages = [];
-        if (systemInstruction) {
-          messages.push({ role: 'system', content: systemInstruction });
+        let combinedSystem = systemInstruction || '';
+        if (groundingInfo?.context) {
+          combinedSystem = combinedSystem
+            ? `${groundingInfo.context}\n\n${combinedSystem}`
+            : groundingInfo.context;
+        }
+
+        if (combinedSystem) {
+          messages.push({ role: 'system', content: combinedSystem });
         }
         messages.push({ role: 'user', content: prompt });
 
@@ -31,7 +38,7 @@ export class GeminiService {
           body: JSON.stringify({
             model,
             messages,
-            temperature: 0.7
+            temperature: 0.3
           })
         });
 
@@ -83,6 +90,8 @@ export class GeminiService {
           isSafetyBlocked,
           isRefused,
           safetyRatings: [],
+          isGrounded: Boolean(groundingInfo?.isGrounded),
+          groundingSources: groundingInfo?.sources || [],
           usageMetadata: data.usage || null
         };
       } catch (err) {
@@ -95,16 +104,17 @@ export class GeminiService {
   }
 
   /**
-   * Send a prompt to Groq or Gemini LLM with safety evaluation and latency tracking.
+   * Send a prompt to Groq or Gemini LLM with safety evaluation, web grounding, and latency tracking.
    * @param {string} prompt - User command or prompt
    * @param {string} [systemInstruction] - Optional system guideline
-   * @returns {Promise<object>} Structured response with text, safety ratings, latency, finishReason
+   * @param {object} [groundingInfo] - Optional live web search grounding context
+   * @returns {Promise<object>} Structured response with text, safety ratings, latency, finishReason, grounding
    */
-  static async generate(prompt, systemInstruction = '') {
+  static async generate(prompt, systemInstruction = '', groundingInfo = null) {
     // 1. If Groq API key is present, prioritize Groq for ultra-fast, free execution
     if (config.groqApiKey) {
       try {
-        return await this.generateWithGroq(prompt, systemInstruction);
+        return await this.generateWithGroq(prompt, systemInstruction, groundingInfo);
       } catch (groqErr) {
         console.warn(`[LLMService] Groq failed, checking Gemini fallback: ${groqErr.message}`);
         if (!config.geminiApiKey) throw groqErr;
@@ -131,6 +141,13 @@ export class GeminiService {
       try {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${config.geminiApiKey}`;
 
+        let combinedSystem = systemInstruction || '';
+        if (groundingInfo?.context) {
+          combinedSystem = combinedSystem
+            ? `${groundingInfo.context}\n\n${combinedSystem}`
+            : groundingInfo.context;
+        }
+
         const payload = {
           contents: [
             {
@@ -139,9 +156,9 @@ export class GeminiService {
           ]
         };
 
-        if (systemInstruction) {
+        if (combinedSystem) {
           payload.systemInstruction = {
-            parts: [{ text: systemInstruction }]
+            parts: [{ text: combinedSystem }]
           };
         }
 
@@ -212,6 +229,8 @@ export class GeminiService {
             probability: r.probability || 'NEGLIGIBLE',
             severity: r.severity || 'LOW'
           })),
+          isGrounded: Boolean(groundingInfo?.isGrounded),
+          groundingSources: groundingInfo?.sources || [],
           usageMetadata: data.usageMetadata || null
         };
       } catch (err) {

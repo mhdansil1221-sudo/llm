@@ -6,6 +6,7 @@ export const useLLMExecution = (onSuccess) => {
   const [isWrongCommand, setIsWrongCommand] = useState(false);
   const [category, setCategory] = useState('CUSTOM_PROMPT');
   const [attackLabel, setAttackLabel] = useState('Custom Prompt');
+  const [useWebSearch, setUseWebSearch] = useState(true);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
@@ -29,7 +30,8 @@ export const useLLMExecution = (onSuccess) => {
         prompt,
         category,
         attackLabel,
-        isWrongCommand
+        isWrongCommand,
+        useWebSearch
       });
       setResult(data);
       if (onSuccess) {
@@ -55,6 +57,8 @@ export const useLLMExecution = (onSuccess) => {
     setPrompt,
     isWrongCommand,
     setIsWrongCommand,
+    useWebSearch,
+    setUseWebSearch,
     category,
     attackLabel,
     loading,

@@ -17,6 +17,8 @@ export function App() {
     setPrompt,
     isWrongCommand,
     setIsWrongCommand,
+    useWebSearch,
+    setUseWebSearch,
     attackLabel,
     loading: execLoading,
     result,
@@ -46,6 +48,8 @@ export function App() {
             setPrompt={setPrompt}
             isWrongCommand={isWrongCommand}
             setIsWrongCommand={setIsWrongCommand}
+            useWebSearch={useWebSearch}
+            setUseWebSearch={setUseWebSearch}
             attackLabel={attackLabel}
             loading={execLoading}
             execute={execute}

@@ -11,7 +11,10 @@ import {
   Bot,
   Sparkles,
   FileText,
-  Code
+  Code,
+  Globe,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
@@ -24,6 +27,7 @@ marked.setOptions({
 export const ResponseViewer = ({ result, loading }) => {
   const [copied, setCopied] = useState(false);
   const [viewMode, setViewMode] = useState('formatted'); // 'formatted' | 'raw'
+  const [showSources, setShowSources] = useState(false);
 
   const handleCopy = () => {
     if (!result?.response) return;
@@ -99,6 +103,11 @@ export const ResponseViewer = ({ result, loading }) => {
         </div>
 
         <div className="response-metrics">
+          {result.isGrounded && (
+            <span className="metric-chip text-emerald" style={{ color: '#10b981', borderColor: 'rgba(16, 185, 129, 0.3)', backgroundColor: 'rgba(16, 185, 129, 0.1)' }}>
+              <Globe size={13} /> Live Web Grounded
+            </span>
+          )}
           <span className="metric-chip">
             <Clock size={13} /> {result.latencyMs ? `${result.latencyMs} ms` : 'N/A'}
           </span>
@@ -157,6 +166,31 @@ export const ResponseViewer = ({ result, loading }) => {
           </div>
         )}
       </div>
+
+      {result.groundingSources && result.groundingSources.length > 0 && (
+        <div className="grounding-tray" style={{ margin: '12px 18px 0 18px', padding: '10px 14px', background: 'rgba(16, 185, 129, 0.05)', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+          <div 
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', userSelect: 'none' }}
+            onClick={() => setShowSources(!showSources)}
+          >
+            <span style={{ fontSize: '12px', fontWeight: 600, color: '#10b981', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Globe size={13} /> Verified Live Search Sources ({result.groundingSources.length})
+            </span>
+            <span style={{ fontSize: '11px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              {showSources ? <><ChevronUp size={12} /> Hide</> : <><ChevronDown size={12} /> View Sources</>}
+            </span>
+          </div>
+          {showSources && (
+            <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {result.groundingSources.map((source, idx) => (
+                <div key={idx} style={{ fontSize: '12px', color: '#cbd5e1', lineHeight: '1.4', background: 'rgba(0, 0, 0, 0.25)', padding: '8px 10px', borderRadius: '6px', borderLeft: '2px solid #10b981' }}>
+                  <strong style={{ color: '#38bdf8' }}>[Source {idx + 1}]:</strong> {source.snippet}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {result.safetyRatings && result.safetyRatings.length > 0 && (
         <div className="safety-ratings-tray">

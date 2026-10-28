@@ -1,5 +1,5 @@
 import React from 'react';
-import { History, RefreshCw, Trash2, AlertTriangle, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { History, RefreshCw, Trash2, AlertTriangle, ShieldCheck, CheckCircle2, Globe } from 'lucide-react';
 
 export const HistoryTable = ({ logs, loading, onRefresh, onClear }) => {
   return (
@@ -94,7 +94,14 @@ export const HistoryTable = ({ logs, loading, onRefresh, onClear }) => {
                     </td>
                     <td>
                       <div className="latency-cell">
-                        <span className="model-name">{log.modelUsed || 'gemini'}</span>
+                        <span className="model-name">
+                          {log.modelUsed || 'gemini'}
+                          {log.isGrounded && (
+                            <span title="Real-Time Web Grounded" style={{ marginLeft: '4px', color: '#10b981', display: 'inline-flex', verticalAlign: 'middle' }}>
+                              <Globe size={11} />
+                            </span>
+                          )}
+                        </span>
                         <span className="latency-val">{log.latencyMs ? `${log.latencyMs}ms` : '-'}</span>
                       </div>
                     </td>

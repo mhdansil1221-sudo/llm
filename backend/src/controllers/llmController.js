@@ -1,9 +1,10 @@
 import { GeminiService } from '../services/geminiService.js';
+import { WebSearchService } from '../services/webSearchService.js';
 import { AttackLog } from '../models/AttackLog.js';
 
 export class LLMController {
   /**
-   * Execute LLM prompt, evaluate response safety, and log result to MongoDB.
+   * Execute LLM prompt, evaluate response safety, ground with web search if needed, and log result to MongoDB.
    */
   static async executePrompt(req, res, next) {
     try {
@@ -12,7 +13,8 @@ export class LLMController {
         category = 'CUSTOM_PROMPT',
         attackLabel = 'Interactive Prompt',
         isWrongCommand = false,
-        systemInstruction = ''
+        systemInstruction = '',
+        useWebSearch = true
       } = req.body;
 
       if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
@@ -22,8 +24,31 @@ export class LLMController {
         });
       }
 
-      // Call Gemini Service
-      const result = await GeminiService.generate(prompt.trim(), systemInstruction);
+      // Check if real-time web search grounding should be performed
+      let groundingInfo = null;
+      if (WebSearchService.shouldSearch(prompt, isWrongCommand, useWebSearch)) {
+        try {
+          const searchResults = await WebSearchService.search(prompt.trim(), 5);
+          const context = WebSearchService.buildGroundingContext(prompt.trim(), searchResults);
+          groundingInfo = {
+            isGrounded: searchResults.length > 0,
+            sources: searchResults,
+            context
+          };
+        } catch (searchErr) {
+          console.warn(`[LLMController] Web grounding search error: ${searchErr.message}`);
+        }
+      } else if (!isWrongCommand) {
+        // Still provide current year and date awareness
+        groundingInfo = {
+          isGrounded: false,
+          sources: [],
+          context: WebSearchService.buildGroundingContext(prompt.trim(), [])
+        };
+      }
+
+      // Call Gemini/Groq Service with grounding context
+      const result = await GeminiService.generate(prompt.trim(), systemInstruction, groundingInfo);
 
       // Determine vulnerability demonstration status
       let status = 'SAFE_RESPONSE';
@@ -54,7 +79,8 @@ export class LLMController {
           safetyRatings: result.safetyRatings,
           finishReason: result.finishReason,
           modelUsed: result.modelUsed,
-          latencyMs: result.latencyMs
+          latencyMs: result.latencyMs,
+          isGrounded: Boolean(result.isGrounded)
         });
         savedLogId = logEntry._id;
       } catch (dbErr) {
@@ -71,6 +97,8 @@ export class LLMController {
           isWrongCommand: Boolean(isWrongCommand),
           isRefused: result.isRefused,
           isSafetyBlocked: result.isSafetyBlocked,
+          isGrounded: Boolean(result.isGrounded),
+          groundingSources: result.groundingSources || [],
           riskScore,
           modelUsed: result.modelUsed,
           latencyMs: result.latencyMs,

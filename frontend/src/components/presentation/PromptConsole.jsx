@@ -1,11 +1,13 @@
 import React from 'react';
-import { Send, Trash2, ShieldAlert, AlertCircle } from 'lucide-react';
+import { Send, Trash2, ShieldAlert, AlertCircle, Globe } from 'lucide-react';
 
 export const PromptConsole = ({
   prompt,
   setPrompt,
   isWrongCommand,
   setIsWrongCommand,
+  useWebSearch = true,
+  setUseWebSearch,
   attackLabel,
   loading,
   execute,
@@ -50,19 +52,35 @@ export const PromptConsole = ({
         )}
 
         <div className="console-controls">
-          <label className="toggle-label" title="Toggle to simulate a known adversarial attack or wrong command">
-            <input
-              type="checkbox"
-              className="toggle-checkbox"
-              checked={isWrongCommand}
-              onChange={(e) => setIsWrongCommand(e.target.checked)}
-              disabled={loading}
-            />
-            <span className="toggle-text">
-              <ShieldAlert size={14} className={isWrongCommand ? 'text-rose' : 'text-muted'} />
-              Mark as Adversarial &quot;Wrong Command&quot; (Attack Demonstration)
-            </span>
-          </label>
+          <div className="toggles-wrapper" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <label className="toggle-label" title="Enable real-time web search grounding for up-to-date facts">
+              <input
+                type="checkbox"
+                className="toggle-checkbox"
+                checked={useWebSearch}
+                onChange={(e) => setUseWebSearch && setUseWebSearch(e.target.checked)}
+                disabled={loading}
+              />
+              <span className="toggle-text">
+                <Globe size={14} className={useWebSearch ? 'text-primary' : 'text-muted'} />
+                Enable Real-Time Web Search Grounding (Live 2026 Data)
+              </span>
+            </label>
+
+            <label className="toggle-label" title="Toggle to simulate a known adversarial attack or wrong command">
+              <input
+                type="checkbox"
+                className="toggle-checkbox"
+                checked={isWrongCommand}
+                onChange={(e) => setIsWrongCommand(e.target.checked)}
+                disabled={loading}
+              />
+              <span className="toggle-text">
+                <ShieldAlert size={14} className={isWrongCommand ? 'text-rose' : 'text-muted'} />
+                Mark as Adversarial &quot;Wrong Command&quot; (Attack Demonstration)
+              </span>
+            </label>
+          </div>
 
           <div className="button-group">
             <button
