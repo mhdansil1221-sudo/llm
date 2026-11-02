@@ -4,6 +4,7 @@ import { config } from './src/config/env.js';
 import { connectDB, getDBStatus } from './src/config/db.js';
 import llmRoutes from './src/routes/llmRoutes.js';
 import logRoutes from './src/routes/logRoutes.js';
+import { seedEmployees } from './src/config/seedEmployees.js';
 import { errorHandler } from './src/middlewares/errorHandler.js';
 
 const app = express();
@@ -42,6 +43,7 @@ app.listen(PORT, async () => {
   console.log(`[Server] Model: ${config.geminiPrimaryModel} (Fallback: ${config.geminiFallbackModel})`);
   console.log(`=======================================================`);
 
-  // Connect to Database
+  // Connect to Database and Seed Initial Employee Records
   await connectDB();
+  await seedEmployees();
 });
